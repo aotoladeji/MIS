@@ -72,11 +72,11 @@ export default function Dashboard() {
       return [
         { id: 'overview', label: '🏠 Overview' },
         { id: 'inventory-overview', label: '📦 Inventory' },
-        { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
-        { id: 'reprint', label: '🔄 Reprint Approvals' },
-        { id: 'material', label: '📦 Material Requests' },
-        { id: 'daily-reports', label: '📊 Daily Reports' },
         { id: 'staff', label: '👥 Staff Management' },
+        { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
+        { id: 'material', label: '📦 Material Requests' },
+        { id: 'reprint', label: '🔄 Reprint Approvals' },
+        { id: 'daily-reports', label: '📊 Daily Reports' },
         { id: 'collections', label: '📈 Collections' }
       ];
     } else {
