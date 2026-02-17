@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 
-export default function Overview({ user }) {
+export default function Overview({ user, onNavigate }) {
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalCards: 0,
     pendingApprovals: 0,
-    cardsToday: 0
+    cardsToday: 0,
+    pendingMaterials: 0,
+    faultyDeliveries: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
@@ -15,92 +18,181 @@ export default function Overview({ user }) {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch users count
-      const usersRes = await fetch('http://localhost:5000/api/users', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const usersData = await usersRes.json();
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
 
-      // Fetch cards count
-      const cardsRes = await fetch('http://localhost:5000/api/cards', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const cardsData = await cardsRes.json();
+      const [usersRes, cardsRes, logsRes, materialsRes, faultyRes] = await Promise.all([
+        fetch('http://localhost:5000/api/users', { headers }),
+        fetch('http://localhost:5000/api/cards', { headers }),
+        fetch('http://localhost:5000/api/logs', { headers }),
+        fetch('http://localhost:5000/api/material', { headers }),
+        fetch('http://localhost:5000/api/inventory/faulty', { headers })
+      ]);
 
-      // Fetch recent logs
-      const logsRes = await fetch('http://localhost:5000/api/logs', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const logsData = await logsRes.json();
+      const [usersData, cardsData, logsData, materialsData, faultyData] = await Promise.all([
+        usersRes.json(),
+        cardsRes.json(),
+        logsRes.json(),
+        materialsRes.json(),
+        faultyRes.json()
+      ]);
+
+      const today = new Date().toDateString();
 
       setStats({
         totalUsers: usersData.users?.length || 0,
         totalCards: cardsData.cards?.length || 0,
         pendingApprovals: cardsData.cards?.filter(c => c.status === 'pending')?.length || 0,
-        cardsToday: cardsData.cards?.filter(c => {
-          const today = new Date().toDateString();
-          const cardDate = new Date(c.created_at).toDateString();
-          return today === cardDate;
-        })?.length || 0
+        cardsToday: cardsData.cards?.filter(c =>
+          new Date(c.created_at).toDateString() === today
+        )?.length || 0,
+        pendingMaterials: materialsData.requests?.filter(r => r.status === 'pending')?.length || 0,
+        faultyDeliveries: faultyData.deliveries?.filter(d => d.status === 'pending')?.length || 0
       });
 
-      setRecentActivity(logsData.logs?.slice(0, 5) || []);
+      setRecentActivity(logsData.logs?.slice(0, 6) || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const getActionColor = (action) => {
+    if (action?.includes('LOGIN')) return 'var(--secondary)';
+    if (action?.includes('DELETE')) return 'var(--danger)';
+    if (action?.includes('CREATE') || action?.includes('ADDED')) return 'var(--success)';
+    if (action?.includes('UPDATE') || action?.includes('CHANGE')) return 'var(--warning)';
+    return 'var(--text-dim)';
+  };
+
+  const getActionIcon = (action) => {
+    if (action?.includes('LOGIN')) return '🔑';
+    if (action?.includes('DELETE')) return '🗑️';
+    if (action?.includes('CREATE') || action?.includes('ADDED')) return '✅';
+    if (action?.includes('UPDATE') || action?.includes('CHANGE')) return '✏️';
+    if (action?.includes('PASSWORD')) return '🔒';
+    if (action?.includes('REPORT')) return '📊';
+    if (action?.includes('INVENTORY')) return '📦';
+    if (action?.includes('MATERIAL')) return '📋';
+    return '📝';
   };
 
   return (
     <>
       <div className="header">
-        <h1>Welcome back, {user?.name}! 👋</h1>
-        <p style={{ color: 'var(--text-dim)', marginTop: '0.5rem' }}>
-          Here's what's happening in your system today
-        </p>
+        <div>
+          <h1>Welcome back, {user?.name}! 👋</h1>
+          <p style={{ color: 'var(--text-dim)', marginTop: '0.5rem' }}>
+            {new Date().toLocaleDateString('en-GB', {
+              weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            })}
+          </p>
+        </div>
       </div>
 
+      {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card">
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('users')}>
           <div className="stat-label">👥 Total Users</div>
           <div className="stat-value">{stats.totalUsers}</div>
+          <div className="stat-change">Click to manage</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" style={{ cursor: 'pointer' }}>
           <div className="stat-label">🎴 Total Cards</div>
           <div className="stat-value">{stats.totalCards}</div>
+          <div className="stat-change">{stats.cardsToday} added today</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" style={{ cursor: 'pointer' }}>
           <div className="stat-label">⏳ Pending Approvals</div>
           <div className="stat-value">{stats.pendingApprovals}</div>
+          <div className="stat-change">Cards awaiting review</div>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate('material-requests')}
+        >
+          <div className="stat-label">📦 Pending Materials</div>
+          <div className="stat-value">{stats.pendingMaterials}</div>
+          <div className="stat-change">Click to review</div>
+        </div>
+        <div
+          className="stat-card"
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate('faulty-deliveries')}
+        >
+          <div className="stat-label">⚠️ Faulty Deliveries</div>
+          <div className="stat-value">{stats.faultyDeliveries}</div>
+          <div className="stat-change">Click to review</div>
+        </div>
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('reports')}>
           <div className="stat-label">📅 Cards Today</div>
           <div className="stat-value">{stats.cardsToday}</div>
+          <div className="stat-change">Click for reports</div>
         </div>
       </div>
 
       <div className="grid-2">
+        {/* Recent Activity */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Recent Activity</h3>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => onNavigate('logs')}
+            >
+              View All Logs
+            </button>
           </div>
-          {recentActivity.length > 0 ? (
+          {loading ? (
+            <p style={{ padding: '1rem', color: 'var(--text-dim)' }}>Loading...</p>
+          ) : recentActivity.length > 0 ? (
             <div>
               {recentActivity.map((log, index) => (
-                <div 
+                <div
                   key={log.id || index}
                   style={{
-                    padding: '1rem',
-                    borderBottom: index < recentActivity.length - 1 ? '1px solid var(--border)' : 'none'
+                    padding: '0.85rem 1rem',
+                    borderBottom: index < recentActivity.length - 1 ? '1px solid var(--border)' : 'none',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                    <strong>{log.action}</strong>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                      {new Date(log.created_at).toLocaleTimeString()}
-                    </span>
+                  <div style={{ fontSize: '1.2rem', marginTop: '0.1rem' }}>
+                    {getActionIcon(log.action)}
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>
-                    {log.username || 'System'} - {log.details}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.2rem',
+                      gap: '0.5rem'
+                    }}>
+                      <strong style={{
+                        fontSize: '0.85rem',
+                        color: getActionColor(log.action),
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {log.action?.replace(/_/g, ' ')}
+                      </strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                        {new Date(log.created_at).toLocaleTimeString([], {
+                          hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '0.82rem',
+                      color: 'var(--text-dim)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {log.username || 'System'} — {log.details}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -110,56 +202,96 @@ export default function Overview({ user }) {
           )}
         </div>
 
+        {/* Quick Actions */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Quick Actions</h3>
           </div>
-          <div style={{ padding: '1rem' }}>
-            <button className="btn btn-primary" style={{ width: '100%', marginBottom: '0.75rem' }}>
-              ➕ Create New User
+          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('users')}
+            >
+              ➕ Create New Account
             </button>
-            <button className="btn btn-secondary" style={{ width: '100%', marginBottom: '0.75rem' }}>
-              📊 View Reports
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('material-requests')}
+            >
+              📦 Review Material Requests
             </button>
-            <button className="btn btn-secondary" style={{ width: '100%' }}>
-              📄 Export Data
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('faulty-deliveries')}
+            >
+              ⚠️ Review Faulty Deliveries
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('inventory')}
+            >
+              📦 Manage Inventory
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('logs')}
+            >
+              📋 View System Logs
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => onNavigate('reports')}
+            >
+              📄 Print Reports
             </button>
           </div>
         </div>
       </div>
 
+      {/* System Status */}
       <div className="card" style={{ marginTop: '1.5rem' }}>
         <div className="card-header">
           <h3 className="card-title">System Status</h3>
         </div>
         <div className="grid-2">
           <div style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span>Database Connection</span>
-              <span className="badge badge-success">Healthy</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span>API Server</span>
-              <span className="badge badge-success">Running</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Storage</span>
-              <span className="badge badge-success">78% Used</span>
-            </div>
+            {[
+              { label: 'Database Connection', status: 'Healthy', type: 'success' },
+              { label: 'API Server', status: 'Running', type: 'success' },
+              { label: 'Storage', status: '78% Used', type: 'warning' }
+            ].map(item => (
+              <div key={item.label} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+                alignItems: 'center'
+              }}>
+                <span>{item.label}</span>
+                <span className={`badge badge-${item.type}`}>{item.status}</span>
+              </div>
+            ))}
           </div>
           <div style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span>Last Backup</span>
-              <span style={{ color: 'var(--text-dim)' }}>2 hours ago</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span>Active Sessions</span>
-              <span style={{ color: 'var(--text-dim)' }}>3 users</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Uptime</span>
-              <span style={{ color: 'var(--text-dim)' }}>99.9%</span>
-            </div>
+            {[
+              { label: 'Last Backup', value: '2 hours ago' },
+              { label: 'Active Sessions', value: `${stats.totalUsers} users` },
+              { label: 'Uptime', value: '99.9%' }
+            ].map(item => (
+              <div key={item.label} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '1rem'
+              }}>
+                <span>{item.label}</span>
+                <span style={{ color: 'var(--text-dim)' }}>{item.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -52,6 +52,13 @@ const updateUserPermissions = async (req, res) => {
     const { id } = req.params;
     const { permissions } = req.body;
 
+      console.log('Update permissions request:', {
+      requesterId: req.user.id,
+      requesterRole: req.user.role,
+      targetUserId: id,
+      newPermissions: permissions
+    });
+
     // Check if user has permission (admin or supervisor)
     if (req.user.role !== 'admin' && req.user.role !== 'supervisor') {
       return res.status(403).json({ message: 'You do not have permission to perform this action' });
@@ -96,46 +103,90 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log('Delete user request:', {
+      requesterId: req.user.id,
+      requesterRole: req.user.role,
+      targetUserId: id
+    });
+
     // Check if user has permission (admin or supervisor)
     if (req.user.role !== 'admin' && req.user.role !== 'supervisor') {
-      return res.status(403).json({ message: 'You do not have permission to perform this action' });
+      return res.status(403).json({ 
+        message: 'You do not have permission to perform this action' 
+      });
     }
 
     // Prevent self-deletion
     if (parseInt(id) === req.user.id) {
-      return res.status(400).json({ message: 'You cannot delete your own account' });
+      return res.status(400).json({ 
+        message: 'You cannot delete your own account' 
+      });
     }
 
-    // Get the target user
-    const targetUser = await pool.query('SELECT role, name FROM users WHERE id = $1', [id]);
+    // Get the target user FIRST before any checks
+    const targetUserResult = await pool.query(
+      'SELECT id, role, name FROM users WHERE id = $1', 
+      [id]
+    );
     
-    if (targetUser.rows.length === 0) {
+    if (targetUserResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Supervisors can only delete staff
-    if (req.user.role === 'supervisor' && targetUser.rows[0].role !== 'staff') {
-      return res.status(403).json({ message: 'Supervisors can only delete staff accounts' });
-    }
+    // Declare variables from query result here so they're accessible throughout
+    const targetRole = targetUserResult.rows[0].role;
+    const targetName = targetUserResult.rows[0].name;
+
+    console.log('Target user details:', { targetRole, targetName });
 
     // Admins cannot be deleted by anyone
-    if (targetUser.rows[0].role === 'admin') {
-      return res.status(403).json({ message: 'Admin accounts cannot be deleted' });
+    if (targetRole === 'admin') {
+      return res.status(403).json({ 
+        message: 'Admin accounts cannot be deleted' 
+      });
     }
 
-    // Delete the user (CASCADE will handle related records based on foreign key settings)
+    // Supervisors can only delete staff
+    if (req.user.role === 'supervisor' && targetRole !== 'staff') {
+      return res.status(403).json({ 
+        message: 'Supervisors can only delete staff accounts' 
+      });
+    }
+
+ // Nullify user references in all related tables before deleting
+    // This preserves all records but removes the user reference
+
+    await pool.query('UPDATE activity_logs SET user_id = NULL WHERE user_id = $1', [id]);
+    await pool.query('UPDATE daily_reports SET submitted_by = NULL WHERE submitted_by = $1', [id]);
+    await pool.query('UPDATE daily_reports SET verified_by = NULL WHERE verified_by = $1', [id]);
+    await pool.query('UPDATE reprint_requests SET requested_by = NULL WHERE requested_by = $1', [id]);
+    await pool.query('UPDATE reprint_requests SET resolved_by = NULL WHERE resolved_by = $1', [id]);
+    await pool.query('UPDATE material_requests SET requested_by = NULL WHERE requested_by = $1', [id]);
+    await pool.query('UPDATE material_requests SET responded_by = NULL WHERE responded_by = $1', [id]);
+    await pool.query('UPDATE inventory SET added_by = NULL WHERE added_by = $1', [id]);
+    await pool.query('UPDATE faulty_deliveries SET reported_by = NULL WHERE reported_by = $1', [id]);
+    await pool.query('UPDATE faulty_inventory_logs SET reported_by = NULL WHERE reported_by = $1', [id]); // ADD THIS
+    await pool.query('UPDATE id_cards SET captured_by = NULL WHERE captured_by = $1', [id]);
+    await pool.query('UPDATE id_cards SET approved_by = NULL WHERE approved_by = $1', [id]);
+    await pool.query('UPDATE id_cards SET printed_by = NULL WHERE printed_by = $1', [id]);
+    await pool.query('UPDATE id_cards SET collected_by = NULL WHERE collected_by = $1', [id]);
+
+    // All checks passed — delete the user
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
+
+    console.log('User deleted successfully:', { id, targetName });
 
     // Log activity
     await pool.query(
       'INSERT INTO activity_logs (user_id, action, details) VALUES ($1, $2, $3)',
-      [req.user.id, 'USER_DELETED', `Deleted user: ${targetUser.rows[0].name} (ID: ${id})`]
+      [req.user.id, 'USER_DELETED', `Deleted user: ${targetName} (ID: ${id})`]
     );
 
     res.json({
       success: true,
-      message: 'User account deleted successfully. Their activities remain in the system.'
+      message: `${targetName}'s account has been deleted. Their activities remain in the system.`
     });
+
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ 

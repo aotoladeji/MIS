@@ -6,19 +6,19 @@ const {
   updateUserPermissions,
   deleteUser
 } = require('../controllers/usersController');
-const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
-// All routes require authentication
+// Apply authentication to all routes
 router.use(authenticateToken);
 
 // All authenticated users can view users
 router.get('/', getAllUsers);
 router.get('/:id', getUserById);
 
-// Admin and Supervisor can update permissions
-router.put('/:id/permissions', authorizeRole('admin', 'supervisor'), updateUserPermissions);
+// Update permissions - no additional middleware, controller handles authorization
+router.put('/:id/permissions', updateUserPermissions);
 
-// Admin and Supervisor can delete users
-router.delete('/:id', authorizeRole(['admin', 'supervisor']), deleteUser);
+// Delete user - no additional middleware, controller handles authorization
+router.delete('/:id', deleteUser);
 
 module.exports = router;

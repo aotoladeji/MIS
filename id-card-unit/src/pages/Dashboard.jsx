@@ -56,143 +56,95 @@ export default function Dashboard() {
   };
 
   // Define tabs based on user role
-  const getTabs = () => {
-    if (user?.role === 'admin') {
-      return [
-        { id: 'overview', label: '🏠 Overview' },
-        { id: 'users', label: '👥 User Management' },
-        { id: 'inventory', label: '📦 Inventory' },
-        { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
-        { id: 'material-requests', label: '📦 Material Requests' },
-        { id: 'logs', label: '📋 System Logs' },
-        { id: 'analytics', label: '📊 Analytics' },
-        { id: 'reports', label: '📄 All Reports' }
-      ];
-    } else if (user?.role === 'supervisor') {
-      return [
-        { id: 'overview', label: '🏠 Overview' },
-        { id: 'inventory-overview', label: '📦 Inventory' },
-        { id: 'staff', label: '👥 Staff Management' },
-        { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
-        { id: 'material', label: '📦 Material Requests' },
-        { id: 'reprint', label: '🔄 Reprint Approvals' },
-        { id: 'daily-reports', label: '📊 Daily Reports' },
-        { id: 'collections', label: '📈 Collections' }
-      ];
-    } else {
-      // Staff permissions
-      const permissions = user?.permissions || [];
-      const tabs = [{ id: 'overview', label: '🏠 Dashboard' }];
+// Update getTabs - add profile to ALL roles
+const getTabs = () => {
+  if (user?.role === 'admin') {
+    return [
+      { id: 'overview', label: '🏠 Overview' },
+      { id: 'users', label: '👥 User Management' },
+      { id: 'inventory', label: '📦 Inventory' },
+      { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
+      { id: 'material-requests', label: '📦 Material Requests' },
+      { id: 'logs', label: '📋 System Logs' },
+      { id: 'analytics', label: '📊 Analytics' },
+      { id: 'reports', label: '📄 Reports' },
+      { id: 'profile', label: '👤 Profile' }
+    ];
+  } else if (user?.role === 'supervisor') {
+    return [
+      { id: 'overview', label: '🏠 Overview' },
+      { id: 'inventory-overview', label: '📦 Inventory' },
+      { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
+      { id: 'reprint', label: '🔄 Reprint Approvals' },
+      { id: 'material', label: '📦 Material Requests' },
+      { id: 'daily-reports', label: '📊 Daily Reports' },
+      { id: 'staff', label: '👥 Staff Management' },
+      { id: 'collections', label: '📈 Collections' },
+      { id: 'profile', label: '👤 Profile' }
+    ];
+  } else {
+    const permissions = user?.permissions || [];
+    const tabs = [{ id: 'overview', label: '🏠 Dashboard' }];
+    if (permissions.includes('inventory')) tabs.push({ id: 'inventory', label: '📦 Inventory' });
+    if (permissions.includes('reprint')) tabs.push({ id: 'reprint', label: '🔄 Reprint Requests' });
+    if (permissions.includes('material')) tabs.push({ id: 'material', label: '📦 Material Requests' });
+    if (permissions.includes('daily-report')) tabs.push({ id: 'daily-report', label: '📊 Daily Reports' });
+    if (permissions.includes('collection')) tabs.push({ id: 'collection', label: '🎴 Collection' });
+    if (permissions.includes('approval')) tabs.push({ id: 'approval', label: '✓ Card Approval' });
+    if (permissions.includes('printing')) tabs.push({ id: 'print-queue', label: '🖨️ Print Queue' });
+    tabs.push({ id: 'profile', label: '👤 Profile' }); // Always available
+    return tabs;
+  }
+};
 
-      if (permissions.includes('inventory')) {
-        tabs.push({ id: 'inventory', label: '📦 Inventory' });
-      }
-      if (permissions.includes('reprint')) {
-        tabs.push({ id: 'reprint', label: '🔄 Reprint Requests' });
-      }
-      if (permissions.includes('material')) {
-        tabs.push({ id: 'material', label: '📦 Material Requests' });
-      }
-      if (permissions.includes('daily-report')) {
-        tabs.push({ id: 'daily-report', label: '📊 Daily Reports' });
-      }
-      if (permissions.includes('collection')) {
-        tabs.push({ id: 'collection', label: '🎴 Collection' });
-      }
-      if (permissions.includes('approval')) {
-        tabs.push({ id: 'approval', label: '✓ Card Approval' });
-      }
-      if (permissions.includes('printing')) {
-        tabs.push({ id: 'print-queue', label: '🖨️ Print Queue' });
-        tabs.push({ id: 'profile', label: '👤 Profile' });
-      }
+// Update renderContent - profile check at the TOP before role checks
+const renderContent = () => {
+  // Profile available to ALL users
+  if (activeTab === 'profile') return <UserProfile />;
 
-      return tabs;
-    }
-  };
-
-  const renderContent = () => {
-    //common profile tab for all users
-    if (user?.role === 'admin') {
-      switch (activeTab) {
-        case 'overview':
-          return <Overview user={user} />;
-        case 'users':
-          return <UserManagement />;
-        case 'inventory':
-          return <InventoryManagement />;
-        case 'faulty-deliveries':
-          return <FaultyDeliveryManagement />;
-        case 'material-requests':
-          return <MaterialRequestManagement />;
-        case 'logs':
-          return <SystemLogs />;
-        case 'analytics':
-          return <Analytics />;
-        case 'reports':
-          return <AllReports />;
-        default:
-          return <div>Content for {activeTab} coming soon...</div>;
-      }
-    }
-
-    // Supervisor content
-    if (user?.role === 'supervisor') {
-      switch (activeTab) {
-        case 'overview':
-         return <SupervisorOverview user={user} />;
-        case 'inventory-overview':
-          return <InventoryOverview />;
-        case 'faulty-deliveries':
-          return <FaultyDeliveryReview />;
-        case 'reprint':
-          return <ReprintApproval />;
-        case 'material':
-          return <MaterialRequestsApproval />;
-        case 'daily-reports':
-          return <DailyReportsReview />;
-        case 'staff':
-          return <StaffManagement />;
-        case 'collections':
-          return <CollectionStats />;
-        default:
-          return <div>Content for {activeTab} coming soon...</div>;
-      }
-    }   
-
-    // Staff content
+  // Admin tabs
+  if (user?.role === 'admin') {
     switch (activeTab) {
-      case 'overview':
-        return <StaffOverview user={user} />;
-      case 'inventory':
-        return <InventoryLog />;
-      case 'reprint':
-        return <ReprintRequests />;
-      case 'material':
-        return <MaterialRequests />;
-      case 'daily-report':
-        return <DailyReportSubmission />;
-      case 'collection':
-        return <CardCollection />;
-      case 'approval':
-        return <CardApproval />;
-      case 'print-queue':
-        return <PrintQueue />;
-      default:
-        return (
-          <div>
-            <div className="header">
-              <h1>Access Denied</h1>
-            </div>
-            <div className="card">
-              <p>You don't have permission to access this feature.</p>
-              <p>Please contact your supervisor to request access.</p>
-            </div>
-          </div>
-        );
+      case 'overview': return <Overview user={user} onNavigate={setActiveTab} />;
+      case 'users': return <UserManagement />;
+      case 'inventory': return <InventoryManagement />;
+      case 'faulty-deliveries': return <FaultyDeliveryManagement />;
+      case 'material-requests': return <MaterialRequestManagement />;
+      case 'logs': return <SystemLogs />;
+      case 'analytics': return <Analytics />;
+      case 'reports': return <AllReports />;
+      default: return null;
     }
-  };
+  }
 
+  // Supervisor tabs
+  if (user?.role === 'supervisor') {
+    switch (activeTab) {
+      case 'overview': return <SupervisorOverview user={user} onNavigate={setActiveTab} />;
+      case 'inventory-overview': return <InventoryOverview />;
+      case 'faulty-deliveries': return <FaultyDeliveryReview />;
+      case 'reprint': return <ReprintApproval />;
+      case 'material': return <MaterialRequestsApproval />;
+      case 'daily-reports': return <DailyReportsReview />;
+      case 'staff': return <StaffManagement />;
+      case 'collections': return <CollectionStats />;
+      default: return null;
+    }
+  }
+
+  // Staff tabs
+  switch (activeTab) {
+    case 'overview': return <StaffOverview user={user} />;
+    case 'inventory': return <InventoryLog />;
+    case 'reprint': return <ReprintRequests />;
+    case 'material': return <MaterialRequests />;
+    case 'daily-report': return <DailyReportSubmission />;
+    case 'collection': return <CardCollection />;
+    case 'approval': return <CardApproval />;
+    case 'print-queue': return <PrintQueue />;
+    default: return null;
+  }
+};
   const tabs = getTabs();
 
   return (
