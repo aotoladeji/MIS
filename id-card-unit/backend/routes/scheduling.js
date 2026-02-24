@@ -9,7 +9,8 @@ const {
   uploadStudentList,
   getScheduledStudents,
   getTimeSlots,
-  sendSchedulingEmails
+  sendSchedulingEmails,
+  deleteConfig
 } = require('../controllers/schedulingController');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
 const multer = require('multer');
@@ -45,5 +46,8 @@ router.get('/:id/slots', getTimeSlots);
 
 // Send scheduling emails
 router.post('/:id/send-emails', authorizeRole(['admin', 'supervisor', 'staff']), sendSchedulingEmails);
+
+// Delete a scheduling config
+router.delete('/:id', authorizeRole(['admin']), deleteConfig);
 
 module.exports = router;

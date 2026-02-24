@@ -83,6 +83,33 @@ export default function SchedulingManagement() {
     }
   };
 
+  const deleteConfig = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?\n\nThis will permanently delete:\n- All student records\n- All appointments\n- All time slots\n\nThis action CANNOT be undone!`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/scheduling/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showNotification(
+          `Deleted: ${data.deleted.config} (${data.deleted.students} students, ${data.deleted.appointments} appointments)`,
+          'success'
+        );
+        fetchConfigs();
+      } else {
+        showNotification(data.message, 'error');
+      }
+    } catch (error) {
+      showNotification('Error deleting scheduling configuration', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-dim)' }}>
@@ -217,6 +244,12 @@ export default function SchedulingManagement() {
                   >
                     📧 Send Emails
                   </button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => deleteConfig(config.id, config.title)}
+                  >
+                    🗑️ Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -306,6 +339,33 @@ function CreateSchedulingForm({ onSuccess }) {
       setLoading(false);
     }
   };
+
+  const deleteConfig = async (id, title) => {
+  if (!window.confirm(`Are you sure you want to delete "${title}"?\n\nThis will permanently delete:\n- All student records\n- All appointments\n- All time slots\n\nThis action CANNOT be undone!`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/scheduling/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      showNotification(
+        `Deleted: ${data.deleted.config} (${data.deleted.students} students, ${data.deleted.appointments} appointments)`,
+        'success'
+      );
+      fetchConfigs();
+    } else {
+      showNotification(data.message, 'error');
+    }
+  } catch (error) {
+    showNotification('Error deleting scheduling configuration', 'error');
+  }
+};
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

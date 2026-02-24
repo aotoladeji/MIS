@@ -428,6 +428,82 @@ const sendSchedulingEmails = async (req, res) => {
   }
 };
 
+// Delete scheduling configuration
+const deleteConfig = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { id } = req.params;
+
+    // Check if config exists
+    const configCheck = await client.query(
+      'SELECT * FROM scheduling_config WHERE id = $1',
+      [id]
+    );
+
+    if (configCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Scheduling configuration not found' });
+    }
+
+    const config = configCheck.rows[0];
+
+    await client.query('BEGIN');
+
+    // Get counts before deletion
+    const studentCount = await client.query(
+      'SELECT COUNT(*) FROM scheduled_students WHERE config_id = $1',
+      [id]
+    );
+    
+    const appointmentCount = await client.query(
+      'SELECT COUNT(*) FROM appointments WHERE config_id = $1',
+      [id]
+    );
+
+    // Delete will cascade to all related tables due to ON DELETE CASCADE
+    // This includes: scheduled_students, appointments, time_slots
+    await client.query(
+      'DELETE FROM scheduling_config WHERE id = $1',
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    // Log the deletion
+    await pool.query(
+      'INSERT INTO activity_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [
+        req.user.id, 
+        'SCHEDULING_DELETED', 
+        `Deleted scheduling: ${config.title} (${studentCount.rows[0].count} students, ${appointmentCount.rows[0].count} appointments)`
+      ]
+    );
+
+    console.log(`Scheduling config ${id} deleted successfully`);
+
+    res.json({
+      success: true,
+      message: 'Scheduling configuration and all related data deleted successfully',
+      deleted: {
+        config: config.title,
+        students: parseInt(studentCount.rows[0].count),
+        appointments: parseInt(appointmentCount.rows[0].count)
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting scheduling config:', error);
+    res.status(500).json({ 
+      message: 'Error deleting scheduling configuration',
+      error: error.message 
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Export the new function
 module.exports = {
   createSchedulingConfig,
   getAllConfigs,
@@ -437,5 +513,6 @@ module.exports = {
   uploadStudentList,
   getScheduledStudents,
   getTimeSlots,
-  sendSchedulingEmails
+  sendSchedulingEmails,
+  deleteConfig
 };
