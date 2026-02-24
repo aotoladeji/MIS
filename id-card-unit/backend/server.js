@@ -14,6 +14,8 @@ const reprintRoutes = require('./routes/reprint');
 const materialRoutes = require('./routes/material');
 const dailyReportsRoutes = require('./routes/dailyReports');
 const inventoryRoutes = require('./routes/inventory');
+const schedulingRoutes = require('./routes/scheduling');
+const publicSchedulingRoutes = require('./routes/publicScheduling');
 
 // Import database connection
 const pool = require('./config/database');
@@ -70,6 +72,8 @@ app.use('/api/reprint', reprintRoutes);
 app.use('/api/material', materialRoutes);
 app.use('/api/daily-reports', dailyReportsRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/scheduling', schedulingRoutes);
+app.use('/api/public/scheduling', publicSchedulingRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

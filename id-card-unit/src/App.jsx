@@ -1,18 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import './styles/global.css';
-
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  return user ? children : <Navigate to="/login" />;
-}
+//import StudentScheduling from './pages/public/StudentScheduling';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -28,6 +19,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Public scheduling route - no authentication required */}
+          {/* <Route path="/schedule/:configId" element={<StudentScheduling />} /> */}
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </BrowserRouter>

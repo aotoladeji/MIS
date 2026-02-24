@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import '../styles/dashboard.css';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import UserProfile from './UserProfile';
+import SchedulingManagement from './supervisor/SchedulingManagement';
+
 
 // Admin imports
 import Overview from './admin/Overview';
@@ -35,7 +38,7 @@ import CardCollection from './staff/CardCollection';
 import CardApproval from './staff/CardApproval';
 import PrintQueue from './staff/PrintQueue';
 
-import '../styles/dashboard.css';
+
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -68,6 +71,7 @@ const getTabs = () => {
       { id: 'logs', label: '📋 System Logs' },
       { id: 'analytics', label: '📊 Analytics' },
       { id: 'reports', label: '📄 Reports' },
+      { id: 'scheduling', label: '📅 Scheduling' },
       { id: 'profile', label: '👤 Profile' }
     ];
   } else if (user?.role === 'supervisor') {
@@ -80,6 +84,7 @@ const getTabs = () => {
       { id: 'daily-reports', label: '📊 Daily Reports' },
       { id: 'staff', label: '👥 Staff Management' },
       { id: 'collections', label: '📈 Collections' },
+      { id: 'scheduling', label: '📅 Scheduling' },
       { id: 'profile', label: '👤 Profile' }
     ];
   } else {
@@ -92,6 +97,8 @@ const getTabs = () => {
     if (permissions.includes('collection')) tabs.push({ id: 'collection', label: '🎴 Collection' });
     if (permissions.includes('approval')) tabs.push({ id: 'approval', label: '✓ Card Approval' });
     if (permissions.includes('printing')) tabs.push({ id: 'print-queue', label: '🖨️ Print Queue' });
+    if (permissions.includes('scheduling')) tabs.push({ id: 'scheduling', label: '📅 Scheduling' });
+
     tabs.push({ id: 'profile', label: '👤 Profile' }); // Always available
     return tabs;
   }
@@ -101,6 +108,7 @@ const getTabs = () => {
 const renderContent = () => {
   // Profile available to ALL users
   if (activeTab === 'profile') return <UserProfile />;
+  if (activeTab === 'scheduling') return <SchedulingManagement />;
 
   // Admin tabs
   if (user?.role === 'admin') {
