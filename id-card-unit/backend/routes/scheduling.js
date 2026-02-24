@@ -12,16 +12,45 @@ const {
   sendSchedulingEmails,
   deleteConfig
 } = require('../controllers/schedulingController');
-const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Helper function to check if user can manage scheduling
+const canManageScheduling = (req, res, next) => {
+  const { role, permissions } = req.user;
+  
+  // Supervisors and admins have full access
+  if (role === 'supervisor' || role === 'admin') {
+    return next();
+  }
+  
+  // Staff need 'scheduling' permission
+  if (role === 'staff' && permissions && permissions.includes('scheduling')) {
+    return next();
+  }
+  
+  return res.status(403).json({ message: 'You do not have permission to manage scheduling' });
+};
+
+// Helper function to check if user can delete scheduling (only supervisor/admin)
+const canDeleteScheduling = (req, res, next) => {
+  const { role } = req.user;
+  
+  // Only supervisors and admins can delete
+  if (role === 'supervisor' || role === 'admin') {
+    return next();
+  }
+  
+  return res.status(403).json({ message: 'Only supervisors and admins can delete scheduling configurations' });
+};
+
 // All routes require authentication
 router.use(authenticateToken);
 
-// Create new scheduling config (supervisor/staff with permission)
-router.post('/', authorizeRole(['admin', 'supervisor', 'staff']), createSchedulingConfig);
+// Create new scheduling config
+router.post('/', canManageScheduling, createSchedulingConfig);
 
 // Get all scheduling configs
 router.get('/', getAllConfigs);
@@ -30,13 +59,13 @@ router.get('/', getAllConfigs);
 router.get('/:id', getConfigById);
 
 // Update config
-router.put('/:id', authorizeRole(['admin', 'supervisor', 'staff']), updateConfig);
+router.put('/:id', canManageScheduling, updateConfig);
 
 // Close/reopen scheduling
-router.put('/:id/toggle', authorizeRole(['admin', 'supervisor', 'staff']), closeReopenConfig);
+router.put('/:id/toggle', canManageScheduling, closeReopenConfig);
 
 // Upload student list (Excel/CSV)
-router.post('/:id/students', authorizeRole(['admin', 'supervisor', 'staff']), upload.single('file'), uploadStudentList);
+router.post('/:id/students', canManageScheduling, upload.single('file'), uploadStudentList);
 
 // Get scheduled students for a config
 router.get('/:id/students', getScheduledStudents);
@@ -45,9 +74,9 @@ router.get('/:id/students', getScheduledStudents);
 router.get('/:id/slots', getTimeSlots);
 
 // Send scheduling emails
-router.post('/:id/send-emails', authorizeRole(['admin', 'supervisor', 'staff']), sendSchedulingEmails);
+router.post('/:id/send-emails', canManageScheduling, sendSchedulingEmails);
 
-// Delete a scheduling config
-router.delete('/:id', authorizeRole(['admin']), deleteConfig);
+// Delete scheduling configuration - ONLY supervisor/admin
+router.delete('/:id', canDeleteScheduling, deleteConfig);
 
 module.exports = router;

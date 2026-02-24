@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { showNotification } from '../../utils/errorHandler';
 
 export default function StudentScheduling() {
   const { configId } = useParams();
-  const [step, setStep] = useState('login'); // login, schedule, confirmation
+  const [step, setStep] = useState('login');
   const [studentId, setStudentId] = useState('');
   const [loginCode, setLoginCode] = useState('');
   const [student, setStudent] = useState(null);
@@ -12,9 +11,11 @@ export default function StudentScheduling() {
   const [slots, setSlots] = useState({});
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
 
     try {
@@ -37,10 +38,10 @@ export default function StudentScheduling() {
           setStep('schedule');
         }
       } else {
-        showNotification(data.message, 'error');
+        setError(data.message);
       }
     } catch (error) {
-      showNotification('Connection error. Please try again.', 'error');
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -54,17 +55,18 @@ export default function StudentScheduling() {
         setSlots(data.slots);
       }
     } catch (error) {
-      showNotification('Error loading slots', 'error');
+      setError('Error loading slots');
     }
   };
 
   const handleBookSlot = async () => {
     if (!selectedSlot) {
-      showNotification('Please select a time slot', 'warning');
+      setError('Please select a time slot');
       return;
     }
 
     setLoading(true);
+    setError('');
 
     try {
       const response = await fetch('http://localhost:5000/api/public/scheduling/book', {
@@ -80,14 +82,13 @@ export default function StudentScheduling() {
       const data = await response.json();
       
       if (response.ok) {
-        showNotification('Appointment booked successfully!', 'success');
         setStep('confirmation');
         setStudent({ ...student, appointment: data.appointment });
       } else {
-        showNotification(data.message, 'error');
+        setError(data.message);
       }
     } catch (error) {
-      showNotification('Error booking appointment', 'error');
+      setError('Error booking appointment');
     } finally {
       setLoading(false);
     }
@@ -110,18 +111,26 @@ export default function StudentScheduling() {
       const data = await response.json();
       
       if (response.ok) {
-        showNotification('Appointment cancelled', 'success');
         setStudent({ ...student, hasScheduled: false, appointment: null });
         await fetchSlots();
         setStep('schedule');
       } else {
-        showNotification(data.message, 'error');
+        setError(data.message);
       }
     } catch (error) {
-      showNotification('Error cancelling appointment', 'error');
+      setError('Error cancelling appointment');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    // Close the window or redirect
+    window.close();
+    // If window.close() doesn't work (popup blocked), redirect to a thank you page
+    setTimeout(() => {
+      window.location.href = 'about:blank';
+    }, 100);
   };
 
   return (
@@ -134,54 +143,116 @@ export default function StudentScheduling() {
       padding: '2rem'
     }}>
       <div style={{
-        background: 'white',
+        background: '#1e293b',
         borderRadius: '20px',
         padding: '2.5rem',
         maxWidth: '900px',
         width: '100%',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        border: '1px solid #334155',
+        position: 'relative'
       }}>
         {step === 'login' && (
           <>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#333' }}>
+              <h1 style={{ 
+                fontSize: '2rem', 
+                marginBottom: '0.5rem', 
+                color: '#ffffff',
+                fontWeight: '700'
+              }}>
                 📅 Schedule Your ID Card Capture
               </h1>
-              <p style={{ color: '#666' }}>
+              <p style={{ color: '#cbd5e1', fontSize: '1rem' }}>
                 Enter your credentials to book an appointment
               </p>
             </div>
 
+            {error && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                padding: '1rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleLogin} style={{ maxWidth: '400px', margin: '0 auto' }}>
-              <div className="form-group">
-                <label>Student ID (JAMB Number or PG Reg Number)</label>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  color: '#ffffff', 
+                  fontWeight: '600',
+                  fontSize: '0.95rem'
+                }}>
+                  Student ID (JAMB Number or PG Reg Number)
+                </label>
                 <input
                   type="text"
-                  className="form-control"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   placeholder="e.g., 12345678 or PG/2024/001"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #334155',
+                    background: '#0f172a',
+                    color: '#f1f5f9',
+                    fontSize: '0.95rem'
+                  }}
                 />
               </div>
 
-              <div className="form-group">
-                <label>Login Code</label>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  color: '#ffffff', 
+                  fontWeight: '600',
+                  fontSize: '0.95rem'
+                }}>
+                  Login Code
+                </label>
                 <input
                   type="text"
-                  className="form-control"
                   value={loginCode}
                   onChange={(e) => setLoginCode(e.target.value)}
                   placeholder="6-digit code from email"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #334155',
+                    background: '#0f172a',
+                    color: '#f1f5f9',
+                    fontSize: '0.95rem'
+                  }}
                 />
               </div>
 
               <button
                 type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
                 disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#3b82f6',
+                  color: 'white',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1
+                }}
               >
                 {loading ? 'Verifying...' : 'Continue →'}
               </button>
@@ -192,32 +263,70 @@ export default function StudentScheduling() {
         {step === 'schedule' && (
           <>
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-                Welcome, {student?.fullName}! 👋
+              <h2 style={{ 
+                fontSize: '1.75rem', 
+                marginBottom: '0.5rem', 
+                color: '#ffffff',
+                fontWeight: '700'
+              }}>
+                Welcome, {student?.full_name || student?.fullName}! 👋
               </h2>
-              <p style={{ color: '#666' }}>
+              <p style={{ 
+                color: '#cbd5e1',
+                fontSize: '1rem'
+              }}>
                 Select a date and time for your ID card capture appointment
               </p>
             </div>
 
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f0f0', borderRadius: '10px' }}>
-              <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
-                📧 {student?.email} • {student?.faculty} • {student?.department}
-              </div>
+            <div style={{ 
+              marginBottom: '1.5rem', 
+              padding: '1rem', 
+              background: '#0f172a', 
+              borderRadius: '10px',
+              fontSize: '0.9rem',
+              color: '#cbd5e1'
+            }}>
+              📧 {student?.email} • {student?.faculty} • {student?.department}
             </div>
 
+            {error && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                padding: '1rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                {error}
+              </div>
+            )}
+
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Available Time Slots</h3>
+              <h3 style={{ 
+                fontSize: '1.25rem', 
+                marginBottom: '1rem', 
+                color: '#ffffff',
+                fontWeight: '600'
+              }}>
+                Available Time Slots
+              </h3>
               
               {Object.keys(slots).length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                <p style={{ textAlign: 'center', color: '#cbd5e1', padding: '2rem', fontSize: '1rem' }}>
                   No available slots at the moment
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
                   {Object.entries(slots).map(([date, dateSlots]) => (
                     <div key={date}>
-                      <h4 style={{ fontSize: '0.95rem', marginBottom: '0.75rem', color: '#333' }}>
+                      <h4 style={{ 
+                        fontSize: '1rem', 
+                        marginBottom: '0.75rem', 
+                        color: '#e2e8f0',
+                        fontWeight: '600'
+                      }}>
                         {new Date(date).toLocaleDateString('en-US', { 
                           weekday: 'long', 
                           year: 'numeric', 
@@ -238,9 +347,9 @@ export default function StudentScheduling() {
                             style={{
                               padding: '0.75rem',
                               borderRadius: '8px',
-                              border: selectedSlot?.id === slot.id ? '2px solid #667eea' : '1px solid #ddd',
-                              background: selectedSlot?.id === slot.id ? '#667eea' : 'white',
-                              color: selectedSlot?.id === slot.id ? 'white' : '#333',
+                              border: selectedSlot?.id === slot.id ? '2px solid #3b82f6' : '1px solid #334155',
+                              background: selectedSlot?.id === slot.id ? '#3b82f6' : '#0f172a',
+                              color: selectedSlot?.id === slot.id ? 'white' : '#cbd5e1',
                               cursor: 'pointer',
                               fontSize: '0.9rem',
                               fontWeight: selectedSlot?.id === slot.id ? '600' : '400',
@@ -257,92 +366,161 @@ export default function StudentScheduling() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={handleBookSlot}
-                disabled={!selectedSlot || loading}
-              >
-                {loading ? 'Booking...' : '✓ Confirm Appointment'}
-              </button>
-            </div>
+            <button
+              onClick={handleBookSlot}
+              disabled={!selectedSlot || loading}
+              style={{
+                width: '100%',
+                padding: '0.875rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#3b82f6',
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: (!selectedSlot || loading) ? 'not-allowed' : 'pointer',
+                opacity: (!selectedSlot || loading) ? 0.5 : 1
+              }}
+            >
+              {loading ? 'Booking...' : '✓ Confirm Appointment'}
+            </button>
           </>
         )}
 
         {step === 'confirmation' && (
           <>
+            {/* Close Button */}
+            <button
+              onClick={handleClose}
+              style={{
+                position: 'absolute',
+                top: '1.5rem',
+                right: '1.5rem',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              }}
+              title="Close"
+            >
+              ✕
+            </button>
+
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-              <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', color: '#333' }}>
+              <h2 style={{ 
+                fontSize: '1.8rem', 
+                marginBottom: '0.5rem', 
+                color: '#ffffff',
+                fontWeight: '700'
+              }}>
                 Appointment Confirmed!
               </h2>
-              <p style={{ color: '#666' }}>
+              <p style={{ color: '#cbd5e1', fontSize: '1rem' }}>
                 Your ID card capture has been scheduled
               </p>
             </div>
 
             <div style={{
-              background: '#f8f9fa',
+              background: '#0f172a',
               borderRadius: '15px',
               padding: '2rem',
               marginBottom: '2rem'
             }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: '#333' }}>
+              <h3 style={{ 
+                fontSize: '1.2rem', 
+                marginBottom: '1.5rem', 
+                color: '#ffffff',
+                fontWeight: '600'
+              }}>
                 Appointment Details
               </h3>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Name:</span>
-                  <strong>{student?.fullName}</strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Name:</span>
+                  <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
+                    {student?.full_name || student?.fullName || 'N/A'}
+                  </strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Date:</span>
-                  <strong>
-                    {student?.appointment?.appointment_date && 
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Date:</span>
+                  <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
+                    {student?.appointment?.appointment_date ? 
                       new Date(student.appointment.appointment_date).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
-                      })
+                      }) : 'N/A'
                     }
                   </strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Time:</span>
-                  <strong>{student?.appointment?.appointment_time?.substring(0, 5)}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Time:</span>
+                  <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
+                    {student?.appointment?.appointment_time?.substring(0, 5) || 'N/A'}
+                  </strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Location:</span>
-                  <strong>ID Card Unit, MIS Department</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Location:</span>
+                  <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
+                    {config?.location || 'ID Card Unit, MIS Department'}
+                  </strong>
                 </div>
               </div>
             </div>
 
             <div style={{
-              background: '#fff3cd',
-              border: '1px solid #ffc107',
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
               borderRadius: '10px',
-              padding: '1rem',
-              marginBottom: '1.5rem'
+              padding: '1.25rem',
+              marginBottom: '1.5rem',
+              color: '#fbbf24'
             }}>
-              <strong style={{ color: '#856404' }}>⚠️ Important:</strong>
-              <ul style={{ margin: '0.5rem 0 0 1.5rem', color: '#856404' }}>
-                <li>Please arrive 10 minutes before your scheduled time</li>
-                <li>Bring a valid ID for verification</li>
-                <li>Dress appropriately for your ID photo</li>
+              <strong style={{ fontSize: '1rem' }}>⚠️ Important:</strong>
+              <ul style={{ margin: '0.75rem 0 0 1.5rem', lineHeight: '1.8' }}>
+                {config?.important_message ? (
+                  config.important_message.split('\n').map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>Please arrive 10 minutes before your scheduled time</li>
+                    <li>Bring a valid ID for verification</li>
+                    <li>Dress appropriately for your ID photo</li>
+                  </>
+                )}
               </ul>
             </div>
 
             <button
-              className="btn btn-danger"
-              style={{ width: '100%' }}
               onClick={handleCancelAppointment}
               disabled={loading}
+              style={{
+                width: '100%',
+                padding: '0.875rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#64748b',
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1
+              }}
             >
-              {loading ? 'Cancelling...' : 'Cancel Appointment'}
+              {loading ? 'Cancelling...' : 'Reschedule Appointment'}
             </button>
           </>
         )}

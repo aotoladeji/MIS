@@ -71,7 +71,6 @@ const getTabs = () => {
       { id: 'logs', label: '📋 System Logs' },
       { id: 'analytics', label: '📊 Analytics' },
       { id: 'reports', label: '📄 Reports' },
-      { id: 'scheduling', label: '📅 Scheduling' },
       { id: 'profile', label: '👤 Profile' }
     ];
   } else if (user?.role === 'supervisor') {

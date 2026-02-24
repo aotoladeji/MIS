@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import { showNotification } from '../../utils/errorHandler';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function SchedulingManagement() {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -244,12 +246,15 @@ export default function SchedulingManagement() {
                   >
                     📧 Send Emails
                   </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => deleteConfig(config.id, config.title)}
-                  >
-                    🗑️ Delete
-                  </button>
+                  {/* Only show delete button for supervisor and admin */}
+            {(user?.role === 'supervisor' || user?.role === 'admin') && (
+                <button
+                className="btn btn-danger btn-sm"
+                onClick={() => deleteConfig(config.id, config.title)}
+                >
+                🗑️ Delete
+                </button>
+            )}
                 </div>
               </div>
             </div>
@@ -294,7 +299,11 @@ function CreateSchedulingForm({ onSuccess }) {
     startDate: '',
     endDate: '',
     dailyEndTime: '14:00',
-    excludeWeekends: true
+    excludeWeekends: true,
+    location: 'Mcarthur Building university of Ibadan',
+    importantMessage: `Please arrive 10 minutes before your scheduled time
+Bring a valid ID for verification
+Dress appropriately for your ID photo`
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -319,53 +328,43 @@ function CreateSchedulingForm({ onSuccess }) {
         throw new Error(data.message);
       }
 
+      const configId = data.config.id;
+
       // Upload student list if provided
       if (file) {
         const formDataFile = new FormData();
         formDataFile.append('file', file);
 
-        await fetch(`http://localhost:5000/api/scheduling/${data.config.id}/students`, {
+        const uploadResponse = await fetch(`http://localhost:5000/api/scheduling/${data.config.id}/students`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: formDataFile
         });
+
+        const uploadData = await uploadResponse.json();
+        
+        if (uploadResponse.ok) {
+          showNotification(
+            `Scheduling created! ${uploadData.imported} student(s) imported successfully.`,
+            'success'
+          );
+        } else {
+          showNotification(
+            `Scheduling created but upload failed: ${uploadData.message}`,
+            'warning'
+          );
+        }
+      } else {
+        showNotification('Scheduling created successfully', 'success');
       }
 
-      showNotification('Scheduling created successfully', 'success');
-      onSuccess();
+      onSuccess(); // This will refresh the list
     } catch (error) {
       showNotification(error.message || 'Error creating scheduling', 'error');
     } finally {
       setLoading(false);
     }
   };
-
-  const deleteConfig = async (id, title) => {
-  if (!window.confirm(`Are you sure you want to delete "${title}"?\n\nThis will permanently delete:\n- All student records\n- All appointments\n- All time slots\n\nThis action CANNOT be undone!`)) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`http://localhost:5000/api/scheduling/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      showNotification(
-        `Deleted: ${data.deleted.config} (${data.deleted.students} students, ${data.deleted.appointments} appointments)`,
-        'success'
-      );
-      fetchConfigs();
-    } else {
-      showNotification(data.message, 'error');
-    }
-  } catch (error) {
-    showNotification('Error deleting scheduling configuration', 'error');
-  }
-};
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -465,21 +464,52 @@ function CreateSchedulingForm({ onSuccess }) {
       </div>
 
       <div className="form-group">
-        <label>Upload Student List (Excel) - Optional</label>
+        <label>Appointment Location</label>
+        <input
+          type="text"
+          className="form-control"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          placeholder="e.g., ID Card Unit, MIS Department"
+        />
+        <small style={{ color: 'var(--text-dim)', marginTop: '0.5rem', display: 'block' }}>
+          This will be shown to students on their confirmation page
+        </small>
+      </div>
+
+      <div className="form-group">
+        <label>Important Message (Instructions for Students)</label>
+        <textarea
+          className="form-control"
+          value={formData.importantMessage}
+          onChange={(e) => setFormData({ ...formData, importantMessage: e.target.value })}
+          rows="5"
+          placeholder="Enter important instructions (one per line)"
+        />
+        <small style={{ color: 'var(--text-dim)', marginTop: '0.5rem', display: 'block' }}>
+          Each line will be shown as a separate bullet point
+        </small>
+      </div>
+
+      <div className="form-group">
+        <label>Upload Student List (Excel/CSV) *</label>
         <input
           type="file"
           className="form-control"
           accept=".xlsx,.xls,.csv"
           onChange={(e) => setFile(e.target.files[0])}
+          required
         />
         <small style={{ color: 'var(--text-dim)', marginTop: '0.5rem', display: 'block' }}>
-          Excel should contain columns: full_name, email, jamb_number or pg_reg_number, faculty, department, level
+          Required columns: <strong>full_name</strong>, <strong>email</strong>, and either <strong>jamb_number</strong> or <strong>pg_reg_number</strong>
+          <br />
+          Optional: faculty, department, level, phone
         </small>
       </div>
 
       <div className="btn-group">
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Creating...' : '✓ Create Schedule'}
+          {loading ? 'Creating...' : '✓ Create Schedule & Import Students'}
         </button>
       </div>
     </form>

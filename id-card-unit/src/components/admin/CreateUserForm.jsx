@@ -18,7 +18,8 @@ export default function CreateUserForm({ role, onSubmit, onClose }) {
   { id: 'daily-report', label: 'Daily Reports', description: 'Submit daily activity reports' },
   { id: 'collection', label: 'Card Collection', description: 'Mark cards as collected' },
   { id: 'approval', label: 'Card Approval', description: 'Review and approve captured ID cards' },
-  { id: 'printing', label: '🖨️ ID Card Printing', description: 'Access print queue and print ID cards' }
+  { id: 'printing', label: '🖨️ ID Card Printing', description: 'Access print queue and print ID cards' },
+  { id: 'scheduling', label: '📅 Scheduling Management' }
 ];
 
   const handleChange = (e) => {

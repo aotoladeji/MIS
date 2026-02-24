@@ -49,7 +49,9 @@ const createSchedulingConfig = async (req, res) => {
       startDate,
       endDate,
       dailyEndTime,
-      excludeWeekends
+      excludeWeekends,
+      location,
+      importantMessage
     } = req.body;
 
     // Validate
@@ -64,8 +66,8 @@ const createSchedulingConfig = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO scheduling_config 
        (title, description, type, slots_per_period, start_date, end_date, 
-        daily_end_time, exclude_weekends, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        daily_end_time, exclude_weekends, location, important_message, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         title,
@@ -76,6 +78,8 @@ const createSchedulingConfig = async (req, res) => {
         endDate || null,
         dailyEndTime || '14:00:00',
         excludeWeekends !== false,
+        location || 'MACARTHUR BUILDING UNIVERSITY OF IBADAN',    
+        importantMessage || null,  
         req.user.id
       ]
     );
@@ -269,12 +273,30 @@ const uploadStudentList = async (req, res) => {
     const worksheet = workbook.Sheets[sheetName];
     const students = XLSX.utils.sheet_to_json(worksheet);
 
+    if (students.length === 0) {
+      return res.status(400).json({ message: 'Excel file is empty or invalid format' });
+    }
+
     let imported = 0;
     let errors = [];
 
     for (const student of students) {
-      try {
-        const loginCode = generateLoginCode();
+     try {
+        // Generate unique login code
+        let loginCode;
+        let isUnique = false;
+        
+        // Keep generating until we get a unique code
+        while (!isUnique) {
+          loginCode = generateLoginCode();
+          const existing = await pool.query(
+            'SELECT id FROM scheduled_students WHERE login_code = $1',
+            [loginCode]
+          );
+          if (existing.rows.length === 0) {
+            isUnique = true;
+          }
+        }
         
         await pool.query(
           `INSERT INTO scheduled_students 
