@@ -94,10 +94,11 @@ export default function AllReports() {
         ]);
 
       } else if (reportId === 'collection') {
-        const res = await fetch('http://localhost:5000/api/cards', { headers });
+        const res = await fetch('http://localhost:5000/api/collections', { headers });
         const data = await res.json();
-        const cards = (data.cards || []).filter(c => {
-          const d = new Date(c.updated_at);
+        const cards = (data.collections || []).filter(c => {
+          if (!c.collected_at) return false;
+          const d = new Date(c.collected_at);
           return c.status === 'collected' && d >= startDate && d <= endDate;
         });
         title = 'Card Collection Report';
@@ -105,13 +106,14 @@ export default function AllReports() {
           { label: 'Total Collected', value: cards.length },
           { label: 'This Period', value: cards.length },
         ];
-        columns = ['Matric No.', 'Full Name', 'Faculty', 'Department', 'Collection Date'];
+        columns = ['ID Number', 'Full Name', 'Faculty', 'Department', 'Collection Date', 'Collected By'];
         rows = cards.map(c => [
-          c.matric_number,
-          c.full_name,
+          c.matric_no || c.staff_id || 'N/A',
+          `${c.surname} ${c.other_names}`,
           c.faculty,
           c.department,
-          new Date(c.updated_at).toLocaleDateString()
+          new Date(c.collected_at).toLocaleDateString(),
+          c.collected_by_name || 'N/A'
         ]);
 
       } else if (reportId === 'material') {

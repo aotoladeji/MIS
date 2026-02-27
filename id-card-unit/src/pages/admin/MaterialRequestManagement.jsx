@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function MaterialRequestManagement() {
@@ -7,6 +9,7 @@ export default function MaterialRequestManagement() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchRequests();
@@ -41,13 +44,22 @@ export default function MaterialRequestManagement() {
   };
 
   const handleAddressSubmit = async (status) => {
-    const responseMessage = prompt('Enter response message:');
-    const actionTaken = prompt('Describe action taken:');
+    const responseMessage = await showDialog({
+      type: 'prompt',
+      title: 'Response Message',
+      message: 'Enter response message:'
+    });
 
     if (!responseMessage) {
       showNotification('Response message is required', 'warning');
       return;
     }
+
+    const actionTaken = await showDialog({
+      type: 'prompt',
+      title: 'Action Taken',
+      message: 'Describe action taken:'
+    });
 
     try {
       const response = await fetch(`http://localhost:5000/api/material/${selectedRequest.id}/address`, {
@@ -165,7 +177,11 @@ export default function MaterialRequestManagement() {
                       {req.response_message && (
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => alert(`Response:\n\n${req.response_message}\n\nResponded by: ${req.responded_by_username || 'N/A'}\nDate: ${req.responded_at ? new Date(req.responded_at).toLocaleString() : 'N/A'}`)}
+                          onClick={() => showDialog({
+                            type: 'alert',
+                            title: 'Response Details',
+                            message: `Response:\n${req.response_message}\n\nResponded by: ${req.responded_by_username || 'N/A'}\nDate: ${req.responded_at ? new Date(req.responded_at).toLocaleString() : 'N/A'}`
+                          })}
                         >
                           👁️ View Response
                         </button>
@@ -233,6 +249,15 @@ export default function MaterialRequestManagement() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function FaultyDeliveryManagement() {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchDeliveries();
@@ -33,7 +36,11 @@ export default function FaultyDeliveryManagement() {
   };
 
   const attestDelivery = async (id, resolveStatus) => {
-    const notes = prompt(`Enter ${resolveStatus === 'resolved' ? 'resolution' : 'acknowledgment'} notes:`);
+    const notes = await showDialog({
+      type: 'prompt',
+      title: `${resolveStatus === 'resolved' ? 'Resolution' : 'Acknowledgment'} Notes`,
+      message: `Enter ${resolveStatus === 'resolved' ? 'resolution' : 'acknowledgment'} notes:`
+    });
     
     if (!notes) {
       showNotification('Notes are required', 'warning');
@@ -166,7 +173,11 @@ export default function FaultyDeliveryManagement() {
                       {delivery.resolution_notes && (
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => alert(`Resolution Notes:\n\n${delivery.resolution_notes}\n\nResolved: ${delivery.resolved_at ? new Date(delivery.resolved_at).toLocaleString() : 'N/A'}`)}
+                          onClick={() => showDialog({
+                            type: 'alert',
+                            title: 'Resolution Notes',
+                            message: `${delivery.resolution_notes}\n\nResolved: ${delivery.resolved_at ? new Date(delivery.resolved_at).toLocaleString() : 'N/A'}`
+                          })}
                         >
                           👁️ View Notes
                         </button>
@@ -179,6 +190,15 @@ export default function FaultyDeliveryManagement() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

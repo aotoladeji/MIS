@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import SubmitDailyReportForm from '../../components/staff/SubmitDailyReportForm';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function DailyReportSubmission() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchReports();
@@ -111,7 +114,11 @@ export default function DailyReportSubmission() {
                     {report.supervisor_remarks ? (
                       <button 
                         className="btn btn-secondary btn-sm"
-                        onClick={() => alert(`Supervisor Remarks:\n\n${report.supervisor_remarks}`)}
+                        onClick={() => showDialog({
+                          type: 'alert',
+                          title: 'Supervisor Remarks',
+                          message: report.supervisor_remarks
+                        })}
                       >
                         👁️ View
                       </button>
@@ -140,6 +147,15 @@ export default function DailyReportSubmission() {
           onClose={() => setModalOpen(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

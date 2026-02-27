@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function Collections() {
@@ -8,6 +10,7 @@ export default function Collections() {
   const [filter, setFilter] = useState('awaiting_collection');
   const [search, setSearch] = useState('');
   const [collecting, setCollecting] = useState({});
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchCollections();
@@ -58,7 +61,13 @@ export default function Collections() {
   };
 
   const markAsCollected = async (id) => {
-    const notes = prompt('Add any notes (optional):');
+    const notes = await showDialog({
+      type: 'prompt',
+      title: 'Collection Notes',
+      message: 'Add any notes (optional):'
+    });
+    
+    if (notes === null) return;
     
     setCollecting(prev => ({ ...prev, [id]: true }));
     try {
@@ -253,6 +262,15 @@ export default function Collections() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

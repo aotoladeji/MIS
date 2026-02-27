@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import VerifyReportForm from '../../components/supervisor/VerifyReportForm';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function DailyReportsReview() {
@@ -9,6 +11,7 @@ export default function DailyReportsReview() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [filter, setFilter] = useState('all');
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchReports();
@@ -150,13 +153,12 @@ export default function DailyReportsReview() {
                       <button 
                         className="btn btn-secondary btn-sm"
                         onClick={() => {
-                          const info = `
-Status: ${rep.verification_status}
-Verified By: ${rep.verified_by_name || 'N/A'}
-Verified At: ${rep.verified_at ? new Date(rep.verified_at).toLocaleString() : 'N/A'}
-Remarks: ${rep.supervisor_remarks || 'None'}
-                          `.trim();
-                          alert(info);
+                          const info = `Status: ${rep.verification_status}\nVerified By: ${rep.verified_by_name || 'N/A'}\nVerified At: ${rep.verified_at ? new Date(rep.verified_at).toLocaleString() : 'N/A'}\nRemarks: ${rep.supervisor_remarks || 'None'}`;
+                          showDialog({
+                            type: 'alert',
+                            title: 'Report Details',
+                            message: info
+                          });
                         }}
                       >
                         👁️ View
@@ -184,6 +186,15 @@ Remarks: ${rep.supervisor_remarks || 'None'}
           />
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

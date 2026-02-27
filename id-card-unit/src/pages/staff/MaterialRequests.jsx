@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import SubmitMaterialRequestForm from '../../components/staff/SubmitMaterialRequestForm';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function MaterialRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchRequests();
@@ -117,7 +120,11 @@ export default function MaterialRequests() {
                     {req.response_message ? (
                       <button 
                         className="btn btn-secondary btn-sm"
-                        onClick={() => alert(`Supervisor Response:\n\n${req.response_message}`)}
+                        onClick={() => showDialog({
+                          type: 'alert',
+                          title: 'Supervisor Response',
+                          message: req.response_message
+                        })}
                       >
                         👁️ View
                       </button>
@@ -146,6 +153,15 @@ export default function MaterialRequests() {
           onClose={() => setModalOpen(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

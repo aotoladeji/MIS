@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 
 export default function FaultyDeliveryReview() {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchDeliveries();
@@ -33,7 +36,13 @@ export default function FaultyDeliveryReview() {
   };
 
   const attestDelivery = async (id) => {
-    const notes = prompt('Enter attestation notes (optional):');
+    const notes = await showDialog({
+      type: 'prompt',
+      title: 'Attestation Notes',
+      message: 'Enter attestation notes (optional):'
+    });
+    
+    if (notes === null) return;
     
     try {
       const response = await fetch(`http://localhost:5000/api/inventory/faulty/${id}/attest`, {
@@ -146,7 +155,11 @@ export default function FaultyDeliveryReview() {
                     {delivery.status !== 'pending' && delivery.resolution_notes && (
                       <button 
                         className="btn btn-secondary btn-sm"
-                        onClick={() => alert(`Notes: ${delivery.resolution_notes}`)}
+                        onClick={() => showDialog({
+                          type: 'alert',
+                          title: 'Resolution Notes',
+                          message: delivery.resolution_notes
+                        })}
                       >
                         👁️ View Notes
                       </button>
@@ -158,6 +171,15 @@ export default function FaultyDeliveryReview() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

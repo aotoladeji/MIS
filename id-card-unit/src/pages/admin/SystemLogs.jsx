@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function SystemLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchLogs();
@@ -35,7 +38,11 @@ export default function SystemLogs() {
   };
 
   const exportLogs = () => {
-    alert('Export logs feature coming soon!');
+    showDialog({
+      type: 'alert',
+      title: 'Coming Soon',
+      message: 'Export logs feature coming soon!'
+    });
   };
 
   if (loading) {
@@ -73,6 +80,15 @@ export default function SystemLogs() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </>
   );
 }

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function StudentScheduling() {
   const { configId } = useParams();
@@ -12,6 +14,7 @@ export default function StudentScheduling() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -95,9 +98,13 @@ export default function StudentScheduling() {
   };
 
   const handleCancelAppointment = async () => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
-      return;
-    }
+    const confirmed = await showDialog({
+      type: 'confirm',
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment?'
+    });
+
+    if (!confirmed) return;
 
     setLoading(true);
 
@@ -525,6 +532,15 @@ export default function StudentScheduling() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 }

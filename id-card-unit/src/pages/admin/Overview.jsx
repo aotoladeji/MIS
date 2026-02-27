@@ -7,7 +7,8 @@ export default function Overview({ user, onNavigate }) {
     pendingApprovals: 0,
     cardsToday: 0,
     pendingMaterials: 0,
-    faultyDeliveries: 0
+    faultyDeliveries: 0,
+    cardsCollected: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,33 +21,44 @@ export default function Overview({ user, onNavigate }) {
     try {
       const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
 
-      const [usersRes, cardsRes, logsRes, materialsRes, faultyRes] = await Promise.all([
+      const [usersRes, approvedCardsRes, printHistoryRes, collectionsRes, logsRes, materialsRes, faultyRes] = await Promise.all([
         fetch('http://localhost:5000/api/users', { headers }),
-        fetch('http://localhost:5000/api/cards', { headers }),
+        fetch('http://localhost:5000/api/approved-cards', { headers }),
+        fetch('http://localhost:5000/api/print-history', { headers }),
+        fetch('http://localhost:5000/api/collections', { headers }),
         fetch('http://localhost:5000/api/logs', { headers }),
         fetch('http://localhost:5000/api/material', { headers }),
         fetch('http://localhost:5000/api/inventory/faulty', { headers })
       ]);
 
-      const [usersData, cardsData, logsData, materialsData, faultyData] = await Promise.all([
+      const [usersData, approvedCardsData, printHistoryData, collectionsData, logsData, materialsData, faultyData] = await Promise.all([
         usersRes.json(),
-        cardsRes.json(),
+        approvedCardsRes.json(),
+        printHistoryRes.json(),
+        collectionsRes.json(),
         logsRes.json(),
         materialsRes.json(),
         faultyRes.json()
       ]);
 
       const today = new Date().toDateString();
+      
+      // Cards printed today from print_history
+      const cardsPrintedToday = printHistoryData.history?.filter(p =>
+        new Date(p.printed_at).toDateString() === today
+      )?.length || 0;
+
+      // Cards collected (from card_collections with status 'collected')
+      const cardsCollected = collectionsData.collections?.filter(c => c.status === 'collected')?.length || 0;
 
       setStats({
         totalUsers: usersData.users?.length || 0,
-        totalCards: cardsData.cards?.length || 0,
-        pendingApprovals: cardsData.cards?.filter(c => c.status === 'pending')?.length || 0,
-        cardsToday: cardsData.cards?.filter(c =>
-          new Date(c.created_at).toDateString() === today
-        )?.length || 0,
+        totalCards: approvedCardsData.cards?.length || 0,
+        pendingApprovals: 0, // Not applicable - cards are approved in capture app
+        cardsToday: cardsPrintedToday,
         pendingMaterials: materialsData.requests?.filter(r => r.status === 'pending')?.length || 0,
-        faultyDeliveries: faultyData.deliveries?.filter(d => d.status === 'pending')?.length || 0
+        faultyDeliveries: faultyData.deliveries?.filter(d => d.status === 'pending')?.length || 0,
+        cardsCollected: cardsCollected
       });
 
       setRecentActivity(logsData.logs?.slice(0, 6) || []);
@@ -97,15 +109,15 @@ export default function Overview({ user, onNavigate }) {
           <div className="stat-value">{stats.totalUsers}</div>
           <div className="stat-change">Click to manage</div>
         </div>
-        <div className="stat-card" style={{ cursor: 'pointer' }}>
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('collections')}>
           <div className="stat-label">🎴 Total Cards</div>
           <div className="stat-value">{stats.totalCards}</div>
-          <div className="stat-change">{stats.cardsToday} added today</div>
+          <div className="stat-change">{stats.cardsToday} printed today</div>
         </div>
-        <div className="stat-card" style={{ cursor: 'pointer' }}>
-          <div className="stat-label">⏳ Pending Approvals</div>
-          <div className="stat-value">{stats.pendingApprovals}</div>
-          <div className="stat-change">Cards awaiting review</div>
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('collections')}>
+          <div className="stat-label">✅ Cards Collected</div>
+          <div className="stat-value">{stats.cardsCollected}</div>
+          <div className="stat-change">Click to view collections</div>
         </div>
         <div
           className="stat-card"
@@ -125,10 +137,10 @@ export default function Overview({ user, onNavigate }) {
           <div className="stat-value">{stats.faultyDeliveries}</div>
           <div className="stat-change">Click to review</div>
         </div>
-        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('reports')}>
-          <div className="stat-label">📅 Cards Today</div>
+        <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => onNavigate('print-history')}>
+          <div className="stat-label">🖨️ Printed Today</div>
           <div className="stat-value">{stats.cardsToday}</div>
-          <div className="stat-change">Click for reports</div>
+          <div className="stat-change">Click for print history</div>
         </div>
       </div>
 

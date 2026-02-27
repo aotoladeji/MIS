@@ -5,7 +5,8 @@ const {
   addInventoryItem,
   logFaultyDelivery,
   getFaultyDeliveries,
-  attestFaultyDelivery
+  attestFaultyDelivery,
+  approveInventoryItem
 } = require('../controllers/inventoryController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -16,5 +17,6 @@ router.post('/', addInventoryItem);
 router.post('/faulty', logFaultyDelivery);
 router.get('/faulty', getFaultyDeliveries);
 router.put('/faulty/:id/attest', attestFaultyDelivery);
+router.put('/:id/approve', approveInventoryItem);
 
 module.exports = router;
