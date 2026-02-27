@@ -298,6 +298,21 @@ const uploadStudentList = async (req, res) => {
           }
         }
         
+        // Build full name from available fields
+        let fullName = student.full_name || student.name || student.fullName;
+        
+        // If no full_name field, try to construct from surname and other_names
+        if (!fullName && (student.surname || student.other_names)) {
+          const surname = (student.surname || '').trim();
+          const otherNames = (student.other_names || student.otherNames || student.other_name || '').trim();
+          fullName = `${surname} ${otherNames}`.trim();
+        }
+        
+        // Final fallback
+        if (!fullName) {
+          fullName = 'Unknown Student';
+        }
+        
         await pool.query(
           `INSERT INTO scheduled_students 
            (config_id, jamb_number, pg_reg_number, full_name, email, phone, 
@@ -307,7 +322,7 @@ const uploadStudentList = async (req, res) => {
             id,
             student.jamb_number || student.JAMB || null,
             student.pg_reg_number || student.PG_REG || null,
-            student.full_name || student.name || `${student.surname} ${student.other_names}`,
+            fullName,
             student.email,
             student.phone || null,
             student.faculty || null,

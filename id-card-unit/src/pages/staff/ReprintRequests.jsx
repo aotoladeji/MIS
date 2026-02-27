@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import SubmitReprintForm from '../../components/staff/SubmitReprintForm';
 import { showNotification } from '../../utils/errorHandler';
 
@@ -7,6 +8,8 @@ export default function ReprintRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [requestToPrint, setRequestToPrint] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -35,6 +38,76 @@ export default function ReprintRequests() {
       showNotification('Unable to connect to server', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrintApproved = (request) => {
+    setRequestToPrint(request);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmPrintApproved = async () => {
+    if (!requestToPrint) return;
+
+    try {
+      // Find the card in approved_cards by matric number
+      const cardsResponse = await fetch('http://localhost:5000/api/approved-cards', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const cardsData = await cardsResponse.json();
+      
+      if (!cardsResponse.ok) {
+        showNotification('Failed to fetch card details', 'error');
+        return;
+      }
+
+      const card = cardsData.cards.find(c => 
+        c.matric_no === requestToPrint.matric_number || c.staff_id === requestToPrint.matric_number
+      );
+
+      if (!card) {
+        showNotification('Card not found in approved cards', 'error');
+        return;
+      }
+
+      // Add to print queue
+      const response = await fetch('http://localhost:5000/api/print-queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ cardId: card.id })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showNotification('Card added to Print Queue successfully', 'success');
+        
+        // Update request status to 'completed'
+        await fetch(`http://localhost:5000/api/reprint/${requestToPrint.id}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ 
+            status: 'completed', 
+            notes: 'Added to print queue' 
+          })
+        });
+        
+        fetchRequests(); // Refresh the list
+      } else {
+        showNotification(data.message || 'Failed to add to print queue', 'error');
+      }
+    } catch (error) {
+      console.error('Error adding to print queue:', error);
+      showNotification('Error adding to print queue', 'error');
     }
   };
 
@@ -87,6 +160,7 @@ export default function ReprintRequests() {
                 <th>Date</th>
                 <th>Status</th>
                 <th>Notes</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -107,13 +181,29 @@ export default function ReprintRequests() {
                   <td>
                     <span className={`badge badge-${
                       req.status === 'approved' ? 'success' : 
-                      req.status === 'rejected' ? 'danger' : 
+                      req.status === 'rejected' ? 'danger' :
+                      req.status === 'completed' ? 'info' :
                       'warning'
                     }`}>
                       {req.status}
                     </span>
                   </td>
                   <td>{req.notes || '-'}</td>
+                  <td>
+                    {req.status === 'approved' && (
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handlePrintApproved(req)}
+                      >
+                        🖨️ Add to Print Queue
+                      </button>
+                    )}
+                    {req.status === 'completed' && (
+                      <span style={{ color: 'var(--success)', fontSize: '0.9rem' }}>
+                        ✓ Printed
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -135,6 +225,20 @@ export default function ReprintRequests() {
           onClose={() => setModalOpen(false)}
         />
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDialogOpen}
+        onClose={() => {
+          setConfirmDialogOpen(false);
+          setRequestToPrint(null);
+        }}
+        onConfirm={confirmPrintApproved}
+        title="Add to Print Queue"
+        message={requestToPrint ? `Add this approved reprint to Print Queue?\n\n${requestToPrint.student_name}\n${requestToPrint.matric_number}` : ''}
+        type="confirm"
+        confirmText="Add to Queue"
+        cancelText="Cancel"
+      />
     </>
   );
 }

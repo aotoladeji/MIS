@@ -1,0 +1,121 @@
+const pool = require('../config/database');
+const { notifyCardCollected } = require('../services/captureAppIntegration');
+
+// Get collection list
+const getCollections = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    
+    let query = `
+      SELECT cc.*, u.name as collected_by_name
+      FROM card_collections cc
+      LEFT JOIN users u ON cc.collected_by = u.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramCount = 0;
+
+    if (status) {
+      paramCount++;
+      query += ' AND cc.status = $' + paramCount;
+      params.push(status);
+    }
+
+    if (search) {
+      paramCount++;
+      const placeholder = '$' + paramCount;
+      query += ` AND (
+        cc.surname ILIKE ${placeholder} OR 
+        cc.other_names ILIKE ${placeholder} OR 
+        cc.matric_no ILIKE ${placeholder} OR 
+        cc.card_number ILIKE ${placeholder}
+      )`;
+      params.push(`%${search}%`);
+    }
+
+    query += ' ORDER BY cc.printed_at DESC';
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      collections: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching collections:', error);
+    res.status(500).json({ message: 'Error fetching collection list' });
+  }
+};
+
+// Mark card as collected
+const markAsCollected = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    const result = await pool.query(
+      `UPDATE card_collections 
+       SET status = 'collected', 
+           collected_at = CURRENT_TIMESTAMP, 
+           collected_by = $1,
+           notes = $2
+       WHERE id = $3
+       RETURNING card_id, surname, other_names`,
+      [req.user.id, notes, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Collection record not found' });
+    }
+
+    const card = result.rows[0];
+
+    // Notify capture app (async)
+    notifyCardCollected(card.card_id).catch(err => 
+      console.error('Failed to notify capture app:', err)
+    );
+
+    // Log activity
+    await pool.query(
+      'INSERT INTO activity_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [req.user.id, 'CARD_COLLECTED', `Card collected: ${card.surname} ${card.other_names}`]
+    );
+
+    res.json({
+      success: true,
+      message: 'Card marked as collected'
+    });
+  } catch (error) {
+    console.error('Error marking card as collected:', error);
+    res.status(500).json({ message: 'Error updating collection status' });
+  }
+};
+
+// Get collection statistics
+const getCollectionStats = async (req, res) => {
+  try {
+    const stats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_printed,
+        COUNT(*) FILTER (WHERE status = 'collected') as total_collected,
+        COUNT(*) FILTER (WHERE status = 'awaiting_collection') as awaiting_collection,
+        COUNT(*) FILTER (WHERE status = 'collected' AND DATE(collected_at) = CURRENT_DATE) as collected_today
+      FROM card_collections
+    `);
+
+    res.json({
+      success: true,
+      stats: stats.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching collection stats:', error);
+    res.status(500).json({ message: 'Error fetching statistics' });
+  }
+};
+
+module.exports = {
+  getCollections,
+  markAsCollected,
+  getCollectionStats
+};

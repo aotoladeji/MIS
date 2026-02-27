@@ -13,9 +13,9 @@
   backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 3rem;
+  padding: 2rem;
   width: 100%;
-  max-width: 450px;
+  max-width: 420px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.6s ease-out;
 }
@@ -33,7 +33,7 @@
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .login-header h1 {

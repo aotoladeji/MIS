@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import '../styles/modal.css';
+import { showNotification } from '../utils/errorHandler';
 
 export default function ChangePasswordModal({ onSuccess, onClose }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -47,7 +48,7 @@ export default function ChangePasswordModal({ onSuccess, onClose }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Password changed successfully! Please login again with your new password.');
+        showNotification('Password changed successfully! Please login again with your new password.', 'success');
         
         // Update user data to remove must_change_password flag
         const user = JSON.parse(localStorage.getItem('user'));
@@ -55,7 +56,6 @@ export default function ChangePasswordModal({ onSuccess, onClose }) {
         localStorage.setItem('user', JSON.stringify(user));
         
         onSuccess();
-        onClose();
       } else {
         setError(data.message || 'Failed to change password');
       }

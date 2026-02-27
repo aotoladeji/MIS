@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -12,8 +12,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,8 +58,8 @@ export default function Login() {
               src={uiLogo}  // USE THE IMPORTED LOGO
               alt="University of Ibadan Logo" 
               style={{
-                width: '320px',
-                height: '320px',
+                width: '120px',
+                height: '120px',
                 objectFit: 'contain',
                 marginBottom: '0.5rem',
                 filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
@@ -61,27 +68,27 @@ export default function Login() {
 
             <p style={{ 
               color: 'var(--text-dim)',
-              fontSize: '0.95rem',
-              marginBottom: '0.25rem'
+              fontSize: '0.85rem',
+              marginBottom: '0.15rem'
             }}>
               Management Information Systems Department
             </p>
             <p style={{ 
               color: 'var(--text-muted)',
-              fontSize: '0.85rem',
-              marginTop: '0.25rem'
+              fontSize: '0.75rem',
+              marginTop: '0.15rem'
             }}>
               University of Ibadan
             </p>
           </div>
 
           {error && (
-            <div className="alert alert-danger" style={{ marginTop: '1.5rem' }}>
+            <div className="alert alert-danger" style={{ marginTop: '1rem' }}>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ marginTop: '2rem' }}>
+          <form onSubmit={handleSubmit} style={{ marginTop: '1.5rem' }}>
             <div className="form-group">
               <label style={{ color: 'var(--text)', fontWeight: '500' }}>Username</label>
               <input
@@ -125,20 +132,20 @@ export default function Login() {
 
           {/* Footer */}
           <div style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
+            marginTop: '1.5rem',
+            paddingTop: '1rem',
             borderTop: '1px solid var(--border)',
             textAlign: 'center'
           }}>
             <p style={{ 
-              fontSize: '0.8rem', 
+              fontSize: '0.75rem', 
               color: 'var(--text-muted)',
               margin: 0
             }}>
               🔒 Authorized Personnel Only
             </p>
             <p style={{ 
-              fontSize: '0.75rem', 
+              fontSize: '0.7rem', 
               color: 'var(--text-muted)',
               marginTop: '0.25rem'
             }}>

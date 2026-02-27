@@ -16,10 +16,23 @@
   z-index: 100;
 }
 
+.header-branding {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
 .dashboard-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
+  color: var(--text);
 }
 
 .user-info {
@@ -81,6 +94,7 @@
 .header h1 {
   font-size: 2rem;
   font-weight: 700;
+  color: var(--text);
 }
 
 /* Stats Grid */
@@ -111,12 +125,20 @@
   font-weight: 500;
 }
 
+.stat-change {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+}
+
+.stat-change.positive {
+  color: var(--success);
+}
+
 .stat-value {
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--secondary), var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
 }
 
 /* Cards */
@@ -141,6 +163,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  color: var(--text);
 }
 
 /* Tables */
@@ -274,6 +297,14 @@ table tbody tr:hover {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+  }
+
+  .header-logo {
+    height: 40px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.25rem;
   }
 
   .dashboard-nav {

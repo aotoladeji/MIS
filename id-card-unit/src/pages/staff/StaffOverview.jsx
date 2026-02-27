@@ -19,37 +19,46 @@ export default function StaffOverview({ user }) {
 
   const fetchDashboardData = async () => {
     try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      
       // Fetch all data in parallel
-      const [cardsRes, reprintsRes, inventoryRes] = await Promise.all([
-        fetch('http://localhost:5000/api/cards', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        }),
-        fetch('http://localhost:5000/api/reprint', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        }),
-        fetch('http://localhost:5000/api/inventory', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        })
+      const [cardsRes, reprintsRes, inventoryRes, printHistoryRes, collectionsRes] = await Promise.all([
+        fetch('http://localhost:5000/api/cards', { headers }),
+        fetch('http://localhost:5000/api/reprint', { headers }),
+        fetch('http://localhost:5000/api/inventory', { headers }),
+        fetch('http://localhost:5000/api/print-history', { headers }),
+        fetch('http://localhost:5000/api/collections', { headers })
       ]);
 
-      const [cardsData, reprintsData, inventoryData] = await Promise.all([
+      const [cardsData, reprintsData, inventoryData, printHistoryData, collectionsData] = await Promise.all([
         cardsRes.json(),
         reprintsRes.json(),
-        inventoryRes.json()
+        inventoryRes.json(),
+        printHistoryRes.json(),
+        collectionsRes.json()
       ]);
 
       const cards = cardsData.cards || [];
       const reprints = reprintsData.requests || [];
       const inventory = inventoryData.inventory || [];
+      const printHistory = printHistoryData.history || [];
+      const collections = collectionsData.collections || [];
 
       const today = new Date().toDateString();
-      const todayCards = cards.filter(c => 
-        new Date(c.created_at).toDateString() === today
+      
+      // Daily prints from print_history table (actual prints today)
+      const todayPrints = printHistory.filter(p => 
+        new Date(p.printed_at).toDateString() === today
       );
 
-      const collectedCards = cards.filter(c => c.status === 'collected');
-      const collectionRate = cards.length > 0 
-        ? Math.round((collectedCards.length / cards.length) * 100) 
+      // Cards collected from card_collections table
+      const collectedCards = collections.filter(c => c.status === 'collected');
+      
+      // Collection rate based on collections table
+      const awaitingCollection = collections.filter(c => c.status === 'awaiting_collection').length;
+      const totalPrinted = collections.length;
+      const collectionRate = totalPrinted > 0 
+        ? Math.round((collectedCards.length / totalPrinted) * 100) 
         : 0;
 
       // Calculate total inventory items
@@ -62,7 +71,7 @@ export default function StaffOverview({ user }) {
         totalInventory: totalInventoryItems,
         pendingReprints: reprints.filter(r => r.status === 'pending').length,
         approvedReprints: reprints.filter(r => r.status === 'approved').length,
-        dailyPrints: todayCards.length,
+        dailyPrints: todayPrints.length,
         cardsCollected: collectedCards.length,
         collectionRate,
         inventoryItems: inventory.length

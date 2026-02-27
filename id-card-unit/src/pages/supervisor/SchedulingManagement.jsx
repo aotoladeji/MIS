@@ -11,6 +11,7 @@ export default function SchedulingManagement() {
   const [selectedConfig, setSelectedConfig] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [configDetails, setConfigDetails] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState({});
 
   useEffect(() => {
     fetchConfigs();
@@ -68,6 +69,13 @@ export default function SchedulingManagement() {
   };
 
   const sendEmails = async (id) => {
+    if (!window.confirm('Send scheduling emails to all students? This may take a few minutes.')) {
+      return;
+    }
+
+    setSendingEmails(prev => ({ ...prev, [id]: true }));
+    document.body.classList.add('loading');
+
     try {
       const response = await fetch(`http://localhost:5000/api/scheduling/${id}/send-emails`, {
         method: 'POST',
@@ -82,6 +90,9 @@ export default function SchedulingManagement() {
       }
     } catch (error) {
       showNotification('Error sending emails', 'error');
+    } finally {
+      setSendingEmails(prev => ({ ...prev, [id]: false }));
+      document.body.classList.remove('loading');
     }
   };
 
@@ -242,9 +253,10 @@ export default function SchedulingManagement() {
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => sendEmails(config.id)}
-                    disabled={config.total_students === 0}
+                    disabled={config.total_students === 0 || sendingEmails[config.id]}
+                    style={{ minWidth: '120px' }}
                   >
-                    📧 Send Emails
+                    {sendingEmails[config.id] ? '⏳ Sending...' : '📧 Send Emails'}
                   </button>
                   {/* Only show delete button for supervisor and admin */}
             {(user?.role === 'supervisor' || user?.role === 'admin') && (

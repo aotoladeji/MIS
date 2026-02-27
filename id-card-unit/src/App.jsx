@@ -21,7 +21,7 @@ function App() {
           />
           {/* Public scheduling route - no authentication required */}
           <Route path="/schedule/:configId" element={<StudentScheduling />} />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

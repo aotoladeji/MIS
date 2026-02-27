@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function UserProfile() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showChangePassword, setShowChangePassword] = useState(false);
+
+  const handlePasswordChanged = () => {
+    setShowChangePassword(false);
+    logout();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -156,7 +164,7 @@ export default function UserProfile() {
 
       {showChangePassword && (
         <ChangePasswordModal 
-          onSuccess={() => setShowChangePassword(false)}
+          onSuccess={handlePasswordChanged}
           onClose={() => setShowChangePassword(false)}
         />
       )}

@@ -5,6 +5,10 @@ import '../styles/dashboard.css';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import UserProfile from './UserProfile';
 import SchedulingManagement from './supervisor/SchedulingManagement';
+import itmsLogo from '../assets/itms_logo.png';
+
+
+
 
 
 // Admin imports
@@ -16,6 +20,7 @@ import AllReports from './admin/AllReports';
 import InventoryManagement from './admin/InventoryManagement';
 import FaultyDeliveryManagement from './admin/FaultyDeliveryManagement';
 import MaterialRequestManagement from './admin/MaterialRequestManagement';
+import PrintHistory from './admin/PrintHistory';
 
 
 // Supervisor imports
@@ -24,7 +29,6 @@ import ReprintApproval from './supervisor/ReprintApproval';
 import MaterialRequestsApproval from './supervisor/MaterialRequestsApproval';
 import DailyReportsReview from './supervisor/DailyReportsReview';
 import StaffManagement from './supervisor/StaffManagement';
-import CollectionStats from './supervisor/CollectionStats';
 import FaultyDeliveryReview from './supervisor/FaultyDeliveryReview';
 import InventoryOverview from './supervisor/InventoryOverview';
 
@@ -34,9 +38,9 @@ import InventoryLog from './staff/InventoryLog';
 import ReprintRequests from './staff/ReprintRequests';
 import MaterialRequests from './staff/MaterialRequests';
 import DailyReportSubmission from './staff/DailyReportSubmission';
-import CardCollection from './staff/CardCollection';
 import CardApproval from './staff/CardApproval';
 import PrintQueue from './staff/PrintQueue';
+import Collections from './staff/Collections';
 
 
 
@@ -68,6 +72,8 @@ const getTabs = () => {
       { id: 'inventory', label: '📦 Inventory' },
       { id: 'faulty-deliveries', label: '⚠️ Faulty Deliveries' },
       { id: 'material-requests', label: '📦 Material Requests' },
+      { id: 'print-history', label: '📋 Print History' }, 
+      { id: 'collections', label: '🎴 Collections' },    
       { id: 'logs', label: '📋 System Logs' },
       { id: 'analytics', label: '📊 Analytics' },
       { id: 'reports', label: '📄 Reports' },
@@ -83,6 +89,7 @@ const getTabs = () => {
       { id: 'daily-reports', label: '📊 Daily Reports' },
       { id: 'staff', label: '👥 Staff Management' },
       { id: 'collections', label: '📈 Collections' },
+      { id: 'print-history', label: '📋 Print History' },
       { id: 'scheduling', label: '📅 Scheduling' },
       { id: 'profile', label: '👤 Profile' }
     ];
@@ -108,6 +115,8 @@ const renderContent = () => {
   // Profile available to ALL users
   if (activeTab === 'profile') return <UserProfile />;
   if (activeTab === 'scheduling') return <SchedulingManagement />;
+  if (activeTab === 'print-queue') return <PrintQueue />;       
+  if (activeTab === 'print-history') return <PrintHistory />; 
 
   // Admin tabs
   if (user?.role === 'admin') {
@@ -117,6 +126,7 @@ const renderContent = () => {
       case 'inventory': return <InventoryManagement />;
       case 'faulty-deliveries': return <FaultyDeliveryManagement />;
       case 'material-requests': return <MaterialRequestManagement />;
+      case 'collections': return <Collections />;
       case 'logs': return <SystemLogs />;
       case 'analytics': return <Analytics />;
       case 'reports': return <AllReports />;
@@ -134,7 +144,8 @@ const renderContent = () => {
       case 'material': return <MaterialRequestsApproval />;
       case 'daily-reports': return <DailyReportsReview />;
       case 'staff': return <StaffManagement />;
-      case 'collections': return <CollectionStats />;
+      case 'collections': return <Collections />;
+      case 'print-history': return <PrintHistory />;
       default: return null;
     }
   }
@@ -146,7 +157,7 @@ const renderContent = () => {
     case 'reprint': return <ReprintRequests />;
     case 'material': return <MaterialRequests />;
     case 'daily-report': return <DailyReportSubmission />;
-    case 'collection': return <CardCollection />;
+    case 'collection': return <Collections />;
     case 'approval': return <CardApproval />;
     case 'print-queue': return <PrintQueue />;
     default: return null;
@@ -158,7 +169,10 @@ const renderContent = () => {
     <div className="dashboard-container">
       {/* Header */}
       <header className="dashboard-header">
-        <h1>🎴 MIS ID Card System</h1>
+        <div className="header-branding">
+          <img src={itmsLogo} alt="IT@MS University of Ibadan Logo" className="header-logo" />
+          <h1>MIS ID Card System</h1>
+        </div>
        
         <div className="user-info">
           <span style={{ color: 'var(--text-dim)' }}>

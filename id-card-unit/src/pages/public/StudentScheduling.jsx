@@ -19,7 +19,7 @@ export default function StudentScheduling() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/public/scheduling/login', {
+      const response = await fetch('http://localhost:3001/api/public/scheduling/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ configId, studentId, loginCode })
@@ -49,7 +49,7 @@ export default function StudentScheduling() {
 
   const fetchSlots = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/public/scheduling/${configId}/available-slots`);
+      const response = await fetch(`http://localhost:3001/api/public/scheduling/${configId}/available-slots`);
       const data = await response.json();
       if (response.ok) {
         setSlots(data.slots);
@@ -69,7 +69,7 @@ export default function StudentScheduling() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/public/scheduling/book', {
+      const response = await fetch('http://localhost:3001/api/public/scheduling/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +102,7 @@ export default function StudentScheduling() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/public/scheduling/cancel', {
+      const response = await fetch('http://localhost:3001/api/public/scheduling/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId: student.id })
@@ -269,7 +269,7 @@ export default function StudentScheduling() {
                 color: '#ffffff',
                 fontWeight: '700'
               }}>
-                Welcome, {student?.full_name || student?.fullName}! 👋
+                Welcome, {student?.fullName || student?.full_name || 'Student'}! 👋
               </h2>
               <p style={{ 
                 color: '#cbd5e1',
@@ -449,7 +449,7 @@ export default function StudentScheduling() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Name:</span>
                   <strong style={{ color: '#ffffff', fontSize: '1rem' }}>
-                    {student?.full_name || student?.fullName || 'N/A'}
+                    {student?.fullName || student?.full_name || 'N/A'}
                   </strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
