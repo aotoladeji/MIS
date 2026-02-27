@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { showNotification } from '../../utils/errorHandler';
 import { useAuth } from '../../hooks/useAuth';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function SchedulingManagement() {
   const [configs, setConfigs] = useState([]);
@@ -12,6 +14,7 @@ export default function SchedulingManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [configDetails, setConfigDetails] = useState(null);
   const [sendingEmails, setSendingEmails] = useState({});
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
 
   useEffect(() => {
     fetchConfigs();
@@ -69,9 +72,15 @@ export default function SchedulingManagement() {
   };
 
   const sendEmails = async (id) => {
-    if (!window.confirm('Send scheduling emails to all students? This may take a few minutes.')) {
-      return;
-    }
+    const confirmed = await showDialog({
+      title: 'Send Scheduling Emails',
+      message: 'Send scheduling emails to all students? This may take a few minutes.',
+      type: 'confirm',
+      confirmText: 'Send Emails',
+      cancelText: 'Cancel'
+    });
+
+    if (!confirmed) return;
 
     setSendingEmails(prev => ({ ...prev, [id]: true }));
     document.body.classList.add('loading');
@@ -97,9 +106,15 @@ export default function SchedulingManagement() {
   };
 
   const deleteConfig = async (id, title) => {
-    if (!window.confirm(`Are you sure you want to delete "${title}"?\n\nThis will permanently delete:\n- All student records\n- All appointments\n- All time slots\n\nThis action CANNOT be undone!`)) {
-      return;
-    }
+    const confirmed = await showDialog({
+      title: 'Delete Scheduling Configuration',
+      message: `Are you sure you want to delete "${title}"?\n\nThis will permanently delete:\n- All student records\n- All appointments\n- All time slots\n\nThis action CANNOT be undone!`,
+      type: 'confirm',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`http://localhost:5000/api/scheduling/${id}`, {
@@ -298,6 +313,19 @@ export default function SchedulingManagement() {
       >
         {configDetails && <SchedulingDetails details={configDetails} />}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        placeholder={dialogState.placeholder}
+        fields={dialogState.fields}
+      />
     </>
   );
 }

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import RespondForm from '../../components/supervisor/RespondForm';
 import { showNotification } from '../../utils/errorHandler';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function MaterialRequestsApproval() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const { dialogState, showDialog, closeDialog } = useConfirmDialog();
+  const [viewResponseDialog, setViewResponseDialog] = useState({ isOpen: false, request: null });
 
   useEffect(() => {
     fetchRequests();
@@ -42,14 +46,36 @@ export default function MaterialRequestsApproval() {
   };
 
   const forwardToAdmin = async (request) => {
-    const urgency = prompt('Set urgency level (normal/high/urgent):', request.urgency);
+    const inputs = await showDialog({
+      title: 'Forward to Admin',
+      message: 'Set urgency level and add forwarding notes:',
+      type: 'multi-prompt',
+      fields: [
+        {
+          name: 'urgency',
+          label: 'Urgency Level',
+          type: 'select',
+          required: true,
+          options: [
+            { value: 'normal', label: 'Normal' },
+            { value: 'high', label: 'High' },
+            { value: 'urgent', label: 'Urgent' }
+          ]
+        },
+        {
+          name: 'notes',
+          label: 'Forwarding Notes',
+          type: 'textarea',
+          placeholder: 'Add notes for admin...',
+          rows: 3,
+          required: false
+        }
+      ],
+      confirmText: 'Forward',
+      cancelText: 'Cancel'
+    });
     
-    if (!urgency || !['normal', 'high', 'urgent'].includes(urgency.toLowerCase())) {
-      showNotification('Invalid urgency level', 'error');
-      return;
-    }
-
-    const notes = prompt('Add forwarding notes for admin:');
+    if (!inputs) return;
 
     try {
       const response = await fetch(`http://localhost:5000/api/material/${request.id}/forward`, {
@@ -59,8 +85,8 @@ export default function MaterialRequestsApproval() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          urgency: urgency.toLowerCase(),
-          forwardNotes: notes || 'Forwarded for admin review'
+          urgency: inputs.urgency,
+          forwardNotes: inputs.notes || 'Forwarded for admin review'
         })
       });
 
@@ -178,7 +204,7 @@ export default function MaterialRequestsApproval() {
                       {req.status !== 'pending' && req.response_message && (
                         <button 
                           className="btn btn-secondary btn-sm"
-                          onClick={() => alert(`Response:\n\n${req.response_message}\n\nResponded by: ${req.responded_by_username || 'N/A'}\nDate: ${req.responded_at ? new Date(req.responded_at).toLocaleString() : 'N/A'}`)}
+                          onClick={() => setViewResponseDialog({ isOpen: true, request: req })}
                         >
                           👁️ View Response
                         </button>
@@ -219,6 +245,29 @@ export default function MaterialRequestsApproval() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        placeholder={dialogState.placeholder}
+        fields={dialogState.fields}
+      />
+
+      <ConfirmDialog
+        isOpen={viewResponseDialog.isOpen}
+        onClose={() => setViewResponseDialog({ isOpen: false, request: null })}
+        onConfirm={() => setViewResponseDialog({ isOpen: false, request: null })}
+        title="Response Details"
+        message={viewResponseDialog.request ? `Response:\n\n${viewResponseDialog.request.response_message}\n\nResponded by: ${viewResponseDialog.request.responded_by_username || 'N/A'}\nDate: ${viewResponseDialog.request.responded_at ? new Date(viewResponseDialog.request.responded_at).toLocaleString() : 'N/A'}` : ''}
+        type="alert"
+        confirmText="Close"
+      />
     </>
   );
 }
